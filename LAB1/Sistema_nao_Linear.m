@@ -1,0 +1,196 @@
+clear 
+close all
+clc
+
+%Constantes 
+m = 0.036;
+g = 9.81;
+J = [2.4*10^-5 0 0
+     0 2.4*10^-5 0
+     0 0 3.23*10^-5];
+ro = 1.225;
+D = [7.24*10^-10 0 0
+     0 7.24*10^-10 0
+     0 0 7.24*10^-10];
+l = 0.046;
+Cq = 7.2884*10^-10;
+Ct = 2.3646*10^-8;
+alpha = cos(deg2rad(45));
+f_g = m*g;
+z_I = [0;0;1];
+
+%Posições
+
+P1 = [l*alpha;-l*alpha;0];
+P2 = [-l*alpha; l*alpha;0];
+P3 = [l*alpha;l*alpha;0];
+P4 = [-l*alpha;-l*alpha;0];
+
+
+%Força Propulsiva 
+T1=(f_g + 0.1*f_g)/4;
+T2=(f_g + 0.1*f_g)/4;
+T3=(f_g + 0.1*f_g)/4;
+T4=(f_g + 0.1*f_g)/4;
+fp1=[0;0;T1];
+fp2=[0;0;T2];
+fp3=[0;0;T3];
+fp4=[0;0;T4];
+fp = [0;0;T1+T2+T3+T4];
+
+%Momento propulsivo
+np1 = cross(P1,fp1);
+np2 = cross(P2,fp2);
+np3 = cross(P3,fp3);
+np4 = cross(P4,fp4);
+np= np1+np2+np3+np4;
+
+%simulação
+Dt = 0.01;
+t = 0:Dt:60;
+nx = 12;
+ny = 4;
+x0 = [0;0;0;0;0;0;0;0;0;0;0;0];
+Nsim = length(t);
+x(:,1) = x0;
+
+for k = 1:Nsim
+
+    p = x(1:3,k);
+    v = x(4:6,k);
+    lbd = x(7:9,k);
+    omega = x(10:12,k);
+    R = Euler2R(lbd);
+    Q = Euler2Q(lbd);
+    fg = g*R'*z_I;
+    fa = R*D*R';
+
+    p_dot = R*v;
+    v_dot = -skew(omega)*v+fg-fa*v+(1/m)*fp;
+    lbd_dot = Q*omega;
+    omega_dot = (-J^-1*skew(omega)*J*omega)+(J^-1*np);
+    x_dot = [p_dot;v_dot;lbd_dot;omega_dot];
+
+    x(:,k+1) = x(:,k) + Dt*x_dot;
+    y(1:12,k) = x(1:12,k);
+
+end
+
+figure(1);%de todos juntos
+subplot(3,1,1);
+plot(t,y(1,:),t,y(2,:),t,y(3,:));
+ylabel('Posição [m]');
+xlabel('Tempo [s]');
+legend('p_x','p_y','p_z');
+grid on;
+
+subplot(3,1,2);
+plot(t,y(4,:),t,y(5,:),t,y(6,:));
+ylabel('Velocidade [m/s]');
+xlabel('Tempo [s]');
+legend('v_x','v_y','v_z');
+grid on;
+
+subplot(3,1,3);
+plot(t,y(7,:),t,y(8,:),t,y(9,:));
+ylabel('Ângulos de Euler [rad]');
+xlabel('Tempo [s]');
+legend('\lambda_x','\lambda_y','\lambda_z');
+grid on;
+
+figure(2);%posições
+subplot(3,1,1);
+plot(t, y(1,:),'LineWidth', 1.5);
+ylabel('p_x [m]');
+xlabel('Tempo [s]');
+grid on;
+
+subplot(3,1,2);
+plot(t, y(2,:),'LineWidth', 1.5);
+ylabel('p_y [m]');
+xlabel('Tempo [s]');
+grid on;
+
+subplot(3,1,3);
+plot(t, y(3,:),'LineWidth', 1.5);
+ylabel('p_z [m]');
+xlabel('Tempo [s]');
+grid on;
+
+
+figure(3); % Criando uma nova figura para as velocidades
+subplot(3,1,1);
+plot(t, y(4,:),'LineWidth', 1.5);
+ylabel('Velocidade v_x [m/s]');
+xlabel('Tempo [s]');
+legend('v_x');
+grid on;
+
+subplot(3,1,2);
+plot(t, y(5,:),'LineWidth', 1.5);
+ylabel('Velocidade v_y [m/s]');
+xlabel('Tempo [s]');
+legend('v_y');
+grid on;
+
+subplot(3,1,3);
+plot(t, y(6,:),'LineWidth', 1.5);
+ylabel('Velocidade v_z [m/s]');
+xlabel('Tempo [s]');
+legend('v_z');
+grid on;
+
+figure(4); % Nova figura para os ângulos de Euler
+subplot(3,1,1);
+plot(t, y(7,:),'LineWidth', 1.5);
+ylabel('\lambda_x [rad]');
+xlabel('Tempo [s]');
+grid on;
+
+subplot(3,1,2);
+plot(t, y(8,:),'LineWidth', 1.5);
+ylabel('\lambda_y [rad]');
+xlabel('Tempo [s]');
+grid on;
+
+subplot(3,1,3);
+plot(t, y(9,:),'LineWidth', 1.5);
+ylabel('\lambda_z [rad]');
+xlabel('Tempo [s]');
+grid on;
+
+figure(5);
+subplot(3,1,1);
+plot(t, y(10,:),'LineWidth', 1.5);
+ylabel('\omega_x [rad/s]');
+xlabel('Tempo [s]');
+grid on;
+
+subplot(3,1,2);
+plot(t, y(11,:),'LineWidth', 1.5);
+ylabel('\omega_y [rad/s]');
+xlabel('Tempo [s]');
+grid on;
+
+subplot(3,1,3);
+plot(t, y(12,:),'LineWidth', 1.5);
+ylabel('\omega_z [rad]');
+xlabel('Tempo [s]');
+grid on;
+
+figure(6); % Criando uma nova figura para a trajetória 3D
+plot3(y(1,:), y(2,:), y(3,:), 'b', 'LineWidth', 1.5);
+hold on;
+plot3(y(1,1), y(2,1), y(3,1), 'go', 'MarkerSize', 8, 'MarkerFaceColor', 'g'); % Ponto inicial
+plot3(y(1,end), y(2,end), y(3,end), 'ro', 'MarkerSize', 8, 'MarkerFaceColor', 'r'); % Ponto final
+grid on;
+xlabel('X [m]');
+ylabel('Y [m]');
+zlabel('Z [m]');
+title('Trajetória do Drone em 3D');
+legend('Trajetória', 'Início', 'Fim');
+view(3); % Ajusta a visualização para uma perspectiva 3D
+
+
+
+
